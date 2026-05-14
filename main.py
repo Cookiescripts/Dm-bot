@@ -35,11 +35,7 @@ async def logic_broadcast(send, edit, guild: discord.Guild, message: str):
     await edit(f"Broadcast complete. Sent: {success} | Failed: {failed}")
 
 
-async def logic_announce(channel: discord.TextChannel, title: str, message: str, author: discord.Member):
-    embed = discord.Embed(title=title, description=message, color=discord.Color.blurple())
-    embed.set_footer(text=f"Announced by {author.display_name}", icon_url=author.display_avatar.url)
-    await channel.send(embed=embed)
-
+INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1504562538744910014&scope=bot%20applications.commands&permissions=8"
 
 HELP_TEXT = (
     "**Available Commands**\n\n"
@@ -47,13 +43,25 @@ HELP_TEXT = (
     "`!dm @user <message>` — Send a DM to a specific user\n"
     "`!broadcast <message>` — Send a DM to all members *(Admin only)*\n"
     "`!announce #channel <title> | <message>` — Post an embed to a channel *(Admin only)*\n"
+    "`!invite` — Get the bot invite link\n"
     "`!help` — Show this help message\n\n"
     "**Slash Commands**\n"
     "`/dm` — Send a DM to a specific user\n"
     "`/broadcast` — Send a DM to all members *(Admin only)*\n"
     "`/announce` — Post an embed to a channel *(Admin only)*\n"
+    "`/invite` — Get the bot invite link\n"
     "`/help` — Show this help message"
 )
+
+
+async def logic_announce(channel: discord.TextChannel, title: str, message: str, author: discord.Member):
+    embed = discord.Embed(
+        title=title,
+        description=message,
+        color=discord.Color.blurple()
+    )
+    embed.set_footer(text=f"Announced by {author.display_name}", icon_url=author.display_avatar.url)
+    await channel.send(embed=embed)
 
 
 # ── Bot events ────────────────────────────────────────────────────────────────
@@ -132,6 +140,11 @@ async def prefix_announce_error(ctx, error):
         await ctx.send(f"An error occurred: {error}")
 
 
+@bot.command(name="invite")
+async def prefix_invite(ctx):
+    await ctx.send(f"Invite me to your server: {INVITE_LINK}")
+
+
 @bot.command(name="help")
 async def prefix_help(ctx):
     await ctx.send(HELP_TEXT)
@@ -143,7 +156,11 @@ async def prefix_help(ctx):
 @app_commands.describe(member="The user to DM", message="The message to send")
 async def slash_dm(interaction: discord.Interaction, member: discord.Member, message: str):
     await interaction.response.defer(ephemeral=True)
-    await logic_dm(lambda text: interaction.followup.send(text, ephemeral=True), member, message)
+    await logic_dm(
+        lambda text: interaction.followup.send(text, ephemeral=True),
+        member,
+        message,
+    )
 
 
 @bot.tree.command(name="broadcast", description="Send a DM to all non-bot members (Admin only)")
@@ -164,11 +181,20 @@ async def slash_broadcast(interaction: discord.Interaction, message: str):
 
 
 @bot.tree.command(name="announce", description="Post a formatted embed announcement to a channel (Admin only)")
-@app_commands.describe(channel="The channel to post in", title="Announcement title", message="Announcement body")
+@app_commands.describe(
+    channel="The channel to post the announcement in",
+    title="The title of the announcement",
+    message="The body of the announcement"
+)
 @app_commands.default_permissions(administrator=True)
 async def slash_announce(interaction: discord.Interaction, channel: discord.TextChannel, title: str, message: str):
     await logic_announce(channel, title, message, interaction.user)
     await interaction.response.send_message(f"Announcement posted in {channel.mention}.", ephemeral=True)
+
+
+@bot.tree.command(name="invite", description="Get the invite link to add the bot to your server")
+async def slash_invite(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Invite me to your server: {INVITE_LINK}", ephemeral=True)
 
 
 @bot.tree.command(name="help", description="Show all available commands")
